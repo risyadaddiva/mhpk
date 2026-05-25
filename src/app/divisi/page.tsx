@@ -1,6 +1,5 @@
 import PublicLayout from "@/components/layout/PublicLayout";
-import Link from "next/link";
-import { ArrowRight, Mountain, Waves } from "lucide-react";
+import { Mountain, Waves } from "lucide-react";
 
 const CaveIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg 
@@ -42,100 +41,84 @@ const CarabinerIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function Home() {
+export default function DivisiPage() {
   const divisions = [
-    { title: "Gunung Hutan", icon: Mountain, desc: "Eksplorasi dan navigasi darat di alam liar.", color: "bg-emerald-500" },
-    { title: "Susur Goa", icon: CaveIcon, desc: "Eksplorasi keindahan dan misteri di bawah tanah.", color: "bg-neutral-600" },
-    { title: "Panjat Tebing", icon: CarabinerIcon, desc: "Menaklukkan tebing vertikal dengan teknik dan kekuatan.", color: "bg-orange-500" },
-    { title: "ORAD", icon: Waves, desc: "Olahraga Arus Deras menyusuri sungai-sungai menantang.", color: "bg-blue-500" },
+    { 
+      id: "gunung-hutan",
+      title: "Gunung Hutan", 
+      icon: Mountain, 
+      desc: "Fokus pada ilmu navigasi darat, survival, dan penjelajahan ekosistem gunung dan hutan. Divisi ini menjadi dasar pembentukan fisik dan mental anggota di alam bebas.", 
+      color: "text-emerald-500",
+      bgLight: "bg-emerald-50",
+      bgDark: "dark:bg-emerald-950/20",
+      borderColor: "border-emerald-200 dark:border-emerald-800/50"
+    },
+    { 
+      id: "susur-goa",
+      title: "Susur Goa", 
+      icon: CaveIcon, 
+      desc: "Mempelajari teknik speleologi dan caving. Mengeksplorasi dunia bawah tanah, memetakan lorong goa, serta mengkaji biospeleologi yang ada di dalamnya.", 
+      color: "text-neutral-600 dark:text-neutral-400",
+      bgLight: "bg-neutral-100",
+      bgDark: "dark:bg-neutral-900",
+      borderColor: "border-neutral-200 dark:border-neutral-800"
+    },
+    { 
+      id: "panjat-tebing",
+      title: "Panjat Tebing", 
+      icon: CarabinerIcon, 
+      desc: "Divisi yang fokus pada olahraga panjat tebing (rock climbing). Mempelajari berbagai teknik pemanjatan, penguasaan alat, dan manajemen risiko di medan vertikal.", 
+      color: "text-orange-500",
+      bgLight: "bg-orange-50",
+      bgDark: "dark:bg-orange-950/20",
+      borderColor: "border-orange-200 dark:border-orange-800/50"
+    },
+    { 
+      id: "orad",
+      title: "ORAD", 
+      icon: Waves, 
+      desc: "Olahraga Arus Deras (ORAD) atau Rafting. Divisi ini mempelajari karakteristik sungai, teknik penyelamatan di air (water rescue), dan navigasi sungai menggunakan perahu karet.", 
+      color: "text-blue-500",
+      bgLight: "bg-blue-50",
+      bgDark: "dark:bg-blue-950/20",
+      borderColor: "border-blue-200 dark:border-blue-800/50"
+    },
   ];
 
   return (
     <PublicLayout>
-      {/* Hero Section */}
-      <section className="relative h-[85vh] flex items-center justify-center overflow-hidden">
-        {/* Placeholder background with gradient overlay */}
-        <div className="absolute inset-0 bg-neutral-900">
-          <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-900/80 to-transparent z-10" />
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 mix-blend-overlay" />
-        </div>
-        
-        <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="max-w-3xl">
-            <span className="inline-block py-1 px-3 rounded-full bg-orange-500/20 text-orange-400 text-sm font-semibold tracking-wider mb-4 border border-orange-500/30">
-              MAHASISWA PENCINTA ALAM BANDUNG
-            </span>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-6 leading-tight">
-              Biarkan kami berkiprah dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">cara kami sendiri</span>.
-            </h1>
-            <p className="text-lg md:text-xl text-neutral-300 mb-10 max-w-2xl leading-relaxed">
-              Sebuah wadah bagi mahasiswa yang memiliki kepedulian terhadap alam dan lingkungan, serta semangat petualangan yang tak pernah padam.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Link 
-                href="/profil" 
-                className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-lg font-semibold transition-all duration-300 flex items-center gap-2 hover:gap-4 shadow-lg shadow-orange-500/30"
-              >
-                Kenali Kami Lebih Dekat <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link 
-                href="/berita" 
-                className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 px-8 py-4 rounded-lg font-semibold transition-all duration-300"
-              >
-                Kegiatan Terbaru
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Divisions Section */}
-      <section className="py-24 bg-white dark:bg-neutral-950">
+      <div className="bg-neutral-50 dark:bg-neutral-950 py-16 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 dark:text-white mb-4">Divisi MAHAPEKA</h2>
-            <div className="w-24 h-1 bg-orange-500 mx-auto rounded-full mb-6" />
-            <p className="text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto text-lg">
-              Empat pilar utama kegiatan alam bebas yang menjadi fokus pembinaan dan penjelajahan anggota MAHAPEKA.
+            <h1 className="text-4xl font-extrabold text-neutral-900 dark:text-white mb-4">Divisi Operasional</h1>
+            <div className="w-20 h-1 bg-orange-500 mx-auto rounded-full mb-6" />
+            <p className="text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto">
+              Setiap anggota MAHAPEKA dibekali kemampuan dasar di keempat divisi, sebelum nantinya memilih spesialisasi untuk pendalaman ilmu.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {divisions.map((div, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {divisions.map((div) => (
               <div 
-                key={index} 
-                className="group p-8 rounded-2xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 hover:border-orange-500/50 dark:hover:border-orange-500/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+                key={div.id}
+                className={`flex flex-col sm:flex-row gap-6 p-8 rounded-2xl bg-white dark:bg-neutral-900 border ${div.borderColor} hover:shadow-lg transition-shadow duration-300`}
               >
-                <div className={`w-14 h-14 rounded-xl ${div.color} flex items-center justify-center text-white mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <div.icon className="w-7 h-7" />
+                <div className={`shrink-0 w-20 h-20 rounded-2xl ${div.bgLight} ${div.bgDark} flex items-center justify-center ${div.color}`}>
+                  <div.icon className="w-10 h-10" />
                 </div>
-                <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-3">{div.title}</h3>
-                <p className="text-neutral-600 dark:text-neutral-400 mb-6 leading-relaxed">
-                  {div.desc}
-                </p>
-                <Link href="/divisi" className="inline-flex items-center text-orange-500 font-medium hover:text-orange-600 transition-colors group-hover:underline underline-offset-4">
-                  Pelajari <ArrowRight className="w-4 h-4 ml-1" />
-                </Link>
+                <div>
+                  <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-3">{div.title}</h2>
+                  <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                    {div.desc}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* Mini CTA / Info Section */}
-      <section className="py-20 relative overflow-hidden bg-neutral-900">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 -left-40 w-96 h-96 bg-orange-500 rounded-full mix-blend-multiply filter blur-3xl" />
-          <div className="absolute bottom-0 -right-40 w-96 h-96 bg-orange-600 rounded-full mix-blend-multiply filter blur-3xl" />
         </div>
-        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <Mountain className="w-16 h-16 text-orange-500 mx-auto mb-6" />
-          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Jadilah Bagian dari Sejarah</h2>
-          <p className="text-xl text-neutral-300 mb-10">
-            MAHAPEKA selalu membuka pintu bagi jiwa-jiwa petualang yang peduli pada kelestarian alam dan lingkungan hidup.
-          </p>
-        </div>
-      </section>
+      </div>
     </PublicLayout>
   );
 }
