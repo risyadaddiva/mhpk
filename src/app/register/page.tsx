@@ -26,6 +26,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   const router = useRouter();
 
@@ -41,6 +42,7 @@ export default function RegisterPage() {
   const handleValidateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setDebugInfo(null);
     setLoading(true);
 
     try {
@@ -55,6 +57,9 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.debug) {
+          setDebugInfo(data.debug);
+        }
         throw new Error(data.message || "Validasi nomor anggota gagal.");
       }
 
@@ -176,9 +181,20 @@ export default function RegisterPage() {
               </div>
 
               {error && (
-                <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-sm flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
-                  <span>{error}</span>
+                <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-sm flex flex-col gap-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
+                    <span>{error}</span>
+                  </div>
+                  {debugInfo && (
+                    <div className="mt-2 pt-2 border-t border-red-200/50 dark:border-red-800/50 text-[11px] font-mono text-neutral-500 dark:text-neutral-400 space-y-1">
+                      <div>Host DB: <span className="text-red-700 dark:text-red-300 font-bold">{debugInfo.supabaseUrlHost}</span></div>
+                      <div>Total Baris di Master: <span className="text-red-700 dark:text-red-300 font-bold">{debugInfo.memberCount}</span></div>
+                      {debugInfo.countError && <div className="text-amber-600">Error Count: {debugInfo.countError}</div>}
+                      {debugInfo.queryError && <div className="text-amber-600">Error Query: {debugInfo.queryError}</div>}
+                      <div>Input Normalisasi: <span className="text-red-700 dark:text-red-300 font-bold">"{debugInfo.normalizedInput}"</span></div>
+                    </div>
+                  )}
                 </div>
               )}
 

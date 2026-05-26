@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseUrl } from "@/lib/supabase";
 import { normalizeNomorAnggota } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
@@ -15,6 +15,19 @@ export async function POST(request: NextRequest) {
 
     const normalizedNo = normalizeNomorAnggota(nomorAnggota);
 
+    // DIAGNOSTIC CHECK: Cek jumlah baris di tabel 'anggota' untuk melacak isu RLS atau tabel kosong
+    const { count: memberCount, error: countError } = await supabase
+      .from("anggota")
+      .select("*", { count: "exact", head: true });
+    
+    console.log(`\n=== [DIAGNOSTIC LOG] ===`);
+    console.log(`Memvalidasi nomor: ${nomorAnggota} -> Ter-normalisasi: ${normalizedNo}`);
+    console.log(`Total baris di tabel 'anggota': ${memberCount}`);
+    if (countError) {
+      console.error(`Error mengambil jumlah baris:`, countError);
+    }
+    console.log(`========================\n`);
+
     // 1. Validasi apakah nomor anggota ada di master database 'anggota'
     const { data: member, error: memberError } = await supabase
       .from("anggota")
@@ -24,8 +37,27 @@ export async function POST(request: NextRequest) {
 
     if (memberError || !member) {
       console.warn(`Validasi gagal: Nomor anggota '${nomorAnggota}' (${normalizedNo}) tidak ditemukan di master.`);
+      
+      let dbHost = "unknown";
+      try {
+        if (supabaseUrl) {
+          const url = new URL(supabaseUrl);
+          dbHost = url.hostname;
+        }
+      } catch (e) {}
+
       return NextResponse.json(
-        { success: false, message: "Nomor Anggota tidak terdaftar di database master MAHAPEKA." },
+        { 
+          success: false, 
+          message: "Nomor Anggota tidak terdaftar di database master MAHAPEKA.",
+          debug: {
+            supabaseUrlHost: dbHost,
+            memberCount: memberCount ?? 0,
+            countError: countError ? countError.message : null,
+            queryError: memberError ? memberError.message : null,
+            normalizedInput: normalizedNo
+          }
+        },
         { status: 404 }
       );
     }
