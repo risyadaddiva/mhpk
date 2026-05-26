@@ -3,8 +3,28 @@
 import AdminLayout from "@/components/layout/AdminLayout";
 import Modal from "@/components/ui/Modal";
 import { useAppContext, Berita } from "@/store/AppContext";
-import { Plus, Edit, Trash2, Image as ImageIcon, Upload, Link as LinkIcon, X, Heading, Bold, Italic } from "lucide-react";
+import { Plus, Edit, Trash2, Image as ImageIcon, Upload, Link as LinkIcon, X, Heading, Bold, Italic, Loader2, AlertCircle } from "lucide-react";
 import { useState } from "react";
+
+// Helper function to dynamically load PDF.js in the browser via CDN
+const loadPdfJs = (): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    if ((window as any).pdfjsLib) {
+      resolve((window as any).pdfjsLib);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    script.onload = () => {
+      const pdfjsLib = (window as any).pdfjsLib;
+      // Configure global worker from the same CDN
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      resolve(pdfjsLib);
+    };
+    script.onerror = () => reject(new Error("Gagal memuat pustaka parser PDF. Periksa koneksi internet Anda."));
+    document.head.appendChild(script);
+  });
+};
 
 export default function AdminBeritaPage() {
   const { berita, addBerita, editBerita, deleteBerita, categories, addCategory } = useAppContext();
@@ -15,13 +35,18 @@ export default function AdminBeritaPage() {
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCatInput, setNewCatInput] = useState("");
 
-  // Form states
+  // PDF Loading & Size Warning states
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Form states (extended with link)
   const [formData, setFormData] = useState<Omit<Berita, "id" | "tanggal">>({
     judul: "",
     kategori: "Kegiatan",
     isi: "",
     penulis: "Admin",
     gambar: "",
+    link: "",
   });
 
   // Image source mode: "upload" | "url"
@@ -34,10 +59,12 @@ export default function AdminBeritaPage() {
       isi: "",
       penulis: "Admin",
       gambar: "",
+      link: "",
     });
     setEditingId(null);
     setIsAddingCategory(false);
     setNewCatInput("");
+    setError("");
   };
 
   const handleOpenAdd = () => {
@@ -53,6 +80,7 @@ export default function AdminBeritaPage() {
       isi: item.isi,
       penulis: item.penulis,
       gambar: item.gambar || "",
+      link: item.link || "",
     });
     // Detect if image is Base64 data URL or typical web URL
     if (item.gambar && (item.gambar.startsWith("http://") || item.gambar.startsWith("https://"))) {
@@ -69,14 +97,69 @@ export default function AdminBeritaPage() {
     }
   };
 
+  // COVER IMAGE: Size Validation <= 2MB Check
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError("");
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setError("Ukuran foto cover melebihi batas maksimal 2MB!");
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData((prev) => ({ ...prev, gambar: reader.result as string }));
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // PDF PARSER: Extract Text & Auto-Fill Fields
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPdfLoading(true);
+    setError("");
+
+    try {
+      const pdfjsLib = await loadPdfJs();
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      let fullText = "";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(" ");
+        fullText += pageText + "\n";
+      }
+
+      const trimmedText = fullText.trim();
+      if (!trimmedText) {
+        throw new Error("Gagal membaca teks dari PDF. Berkas mungkin kosong atau berupa hasil scan gambar.");
+      }
+
+      // Ambil kalimat pertama untuk Judul (kalimat diakhiri titik/tanda tanya/seru)
+      const firstSentenceMatch = trimmedText.match(/^[^.!?]+/);
+      const firstSentence = firstSentenceMatch ? firstSentenceMatch[0].trim() : "Judul Artikel dari PDF";
+      const cleanTitle = firstSentence.substring(0, 80);
+
+      setFormData((prev) => ({
+        ...prev,
+        judul: prev.judul || cleanTitle,
+        isi: prev.isi ? `${prev.isi}\n\n${trimmedText}` : trimmedText
+      }));
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Gagal mengurai file PDF.");
+    } finally {
+      setPdfLoading(false);
+      // Reset file input agar bisa di-upload ulang
+      e.target.value = "";
     }
   };
 
@@ -89,7 +172,8 @@ export default function AdminBeritaPage() {
     setIsAddingCategory(false);
   };
 
-  const insertFormat = (formatType: "sub" | "bold" | "italic") => {
+  // MARKDOWN TOOLBAR: Subjudul, Tebal, Miring, dan Tautan Hyperlink
+  const insertFormat = (formatType: "sub" | "bold" | "italic" | "link") => {
     const textarea = document.getElementById("content-textarea") as HTMLTextAreaElement;
     if (!textarea) return;
     const start = textarea.selectionStart;
@@ -104,6 +188,8 @@ export default function AdminBeritaPage() {
       replacement = `**${selectedText || "Tebal"}**`;
     } else if (formatType === "italic") {
       replacement = `*${selectedText || "Miring"}*`;
+    } else if (formatType === "link") {
+      replacement = `[${selectedText || "Teks Tautan"}](https://url-referensi.com)`;
     }
 
     const newValue = text.substring(0, start) + replacement + text.substring(end);
@@ -136,7 +222,7 @@ export default function AdminBeritaPage() {
         </div>
         <button
           onClick={handleOpenAdd}
-          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
+          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
         >
           <Plus className="w-5 h-5" />
           Tambah Berita
@@ -185,14 +271,14 @@ export default function AdminBeritaPage() {
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => handleOpenEdit(item)}
-                        className="p-1.5 text-neutral-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                        className="p-1.5 text-neutral-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors cursor-pointer"
                         title="Edit Berita"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(item.id, item.judul)}
-                        className="p-1.5 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                        className="p-1.5 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors cursor-pointer"
                         title="Hapus Berita"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -220,6 +306,47 @@ export default function AdminBeritaPage() {
         title={editingId ? "Edit Berita/Artikel" : "Tambah Berita Baru"}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* Warning Error Alert */}
+          {error && (
+            <div className="p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-xs font-medium flex items-start gap-2 animate-shake">
+              <AlertCircle className="w-4.5 h-4.5 shrink-0 text-red-500" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* 1. PDF AUTO-FILL COMPONENT */}
+          {!editingId && (
+            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/50 p-4 rounded-xl space-y-2.5">
+              <label className="block text-xs font-extrabold uppercase tracking-wider text-orange-600 dark:text-orange-400">
+                ⚡ Auto-Fill dari PDF (Opsional)
+              </label>
+              <p className="text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                Tarik teks artikel secara instan dari berkas dokumen PDF. Sistem akan mengisi otomatis judul dan teks berita Anda.
+              </p>
+              <div className="flex items-center gap-3">
+                <label className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-500/50 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors shadow-sm">
+                  {pdfLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5" />
+                  )}
+                  {pdfLoading ? "Mengekstrak..." : "Pilih File PDF"}
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handlePdfUpload}
+                    disabled={pdfLoading}
+                    className="hidden"
+                  />
+                </label>
+                {pdfLoading && (
+                  <span className="text-xs text-orange-500 animate-pulse font-medium">Mengurai isi dokumen...</span>
+                )}
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Judul Berita</label>
             <input
@@ -251,7 +378,7 @@ export default function AdminBeritaPage() {
                     <button
                       type="button"
                       onClick={() => setIsAddingCategory(true)}
-                      className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-lg text-sm transition-colors border border-neutral-200 dark:border-neutral-700"
+                      className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-lg text-sm transition-colors border border-neutral-200 dark:border-neutral-700 cursor-pointer"
                       title="Tambah Kategori Baru"
                     >
                       + Baru
@@ -269,14 +396,14 @@ export default function AdminBeritaPage() {
                     <button
                       type="button"
                       onClick={handleAddCategory}
-                      className="px-2.5 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold"
+                      className="px-2.5 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold cursor-pointer"
                     >
                       Simpan
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsAddingCategory(false)}
-                      className="p-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-700 rounded-lg"
+                      className="p-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-700 rounded-lg cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -298,7 +425,21 @@ export default function AdminBeritaPage() {
             </div>
           </div>
 
-          {/* Media Gambar */}
+          {/* 2. EXTERNAL TAUTAN LINK REFERENCES */}
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+              Tautan / Link Referensi (Opsional)
+            </label>
+            <input
+              type="url"
+              value={formData.link}
+              onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+              className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-colors text-xs"
+              placeholder="https://mahapeka.org/dokumen-pendukung"
+            />
+          </div>
+
+          {/* Media Gambar (validasi size <= 2MB terintegrasi) */}
           <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 bg-neutral-50/50 dark:bg-neutral-950/20">
             <div className="flex items-center justify-between mb-3 border-b border-neutral-200 dark:border-neutral-800 pb-2">
               <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Gambar Cover</span>
@@ -306,7 +447,7 @@ export default function AdminBeritaPage() {
                 <button
                   type="button"
                   onClick={() => setImageMode("upload")}
-                  className={`px-3 py-1 rounded-md font-medium transition-all ${
+                  className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
                     imageMode === "upload"
                       ? "bg-white dark:bg-neutral-800 text-orange-500 shadow-sm"
                       : "text-neutral-600 dark:text-neutral-400"
@@ -317,7 +458,7 @@ export default function AdminBeritaPage() {
                 <button
                   type="button"
                   onClick={() => setImageMode("url")}
-                  className={`px-3 py-1 rounded-md font-medium transition-all ${
+                  className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
                     imageMode === "url"
                       ? "bg-white dark:bg-neutral-800 text-orange-500 shadow-sm"
                       : "text-neutral-600 dark:text-neutral-400"
@@ -333,7 +474,7 @@ export default function AdminBeritaPage() {
                 <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-lg cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors">
                   <div className="flex flex-col items-center justify-center pt-4 pb-4">
                     <Upload className="w-6 h-6 text-neutral-400 mb-1" />
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">Pilih berkas gambar local</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">Pilih foto cover (Maks 2MB)</p>
                   </div>
                   <input
                     type="file"
@@ -362,7 +503,7 @@ export default function AdminBeritaPage() {
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, gambar: "" })}
-                  className="absolute top-2 right-2 p-1 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors"
+                  className="absolute top-2 right-2 p-1 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors cursor-pointer"
                   title="Hapus Gambar"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -399,6 +540,15 @@ export default function AdminBeritaPage() {
                 >
                   <Italic className="w-4 h-4" />
                 </button>
+                {/* 3. TOOLBAR HYPERLINK BUTTON */}
+                <button
+                  type="button"
+                  onClick={() => insertFormat("link")}
+                  className="p-1.5 hover:bg-white dark:hover:bg-neutral-800 rounded text-neutral-700 dark:text-neutral-300 hover:text-orange-500 dark:hover:text-orange-400 transition-colors cursor-pointer"
+                  title="Sisipkan Link Hyperlink"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                </button>
               </div>
             </div>
             <textarea
@@ -408,7 +558,7 @@ export default function AdminBeritaPage() {
               value={formData.isi}
               onChange={(e) => setFormData({ ...formData, isi: e.target.value })}
               className="w-full px-3 py-2.5 border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none resize-none transition-colors font-sans text-sm leading-relaxed"
-              placeholder="Tulis detail artikel/berita di sini... Gunakan tombol di atas untuk menyisipkan Subjudul, Tebal, atau Miring."
+              placeholder="Tulis detail artikel/berita di sini... Gunakan tombol di atas untuk menyisipkan Subjudul, Tebal, Miring, atau Hyperlink."
             />
           </div>
 
@@ -416,13 +566,13 @@ export default function AdminBeritaPage() {
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors cursor-pointer"
             >
               {editingId ? "Simpan Perubahan" : "Simpan Berita"}
             </button>

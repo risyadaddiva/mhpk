@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { isLoggedIn } = useAppContext();
+  const { isLoggedIn, user } = useAppContext();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -23,6 +23,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   if (!mounted || !isLoggedIn) {
     return null; // or a loading spinner
   }
+
+  const displayName = user?.nama_lapangan 
+    ? `${user.nama_anggota} (${user.nama_lapangan})` 
+    : (user?.nama_anggota || "Admin MAHAPEKA");
+  const initial = user?.nama_anggota ? user.nama_anggota.charAt(0).toUpperCase() : "A";
 
   return (
     <div className="flex h-screen overflow-hidden bg-neutral-50 dark:bg-neutral-950">
@@ -62,9 +67,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <ThemeToggle />
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center text-orange-600 dark:text-orange-400 font-bold">
-                A
+                {initial}
               </div>
-              <span className="text-sm font-medium hidden sm:block">Admin MAHAPEKA</span>
+              <span className="text-sm font-medium hidden sm:block">{displayName}</span>
             </div>
           </div>
         </header>

@@ -11,6 +11,7 @@ export interface Berita {
   penulis: string;
   tanggal: string;
   gambar?: string;
+  link?: string;
 }
 
 export interface Alat {
@@ -31,15 +32,28 @@ export interface Peminjaman {
   status: "Dipinjam" | "Dikembalikan";
 }
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  nomor_anggota: string;
+  nomor_anggota_normalized: string;
+  nama_anggota: string;
+  nama_lapangan?: string;
+}
+
 interface AppContextType {
   isLoggedIn: boolean;
   setIsLoggedIn: (value: boolean) => void;
+  user: UserProfile | null;
+  setUser: (value: UserProfile | null) => void;
   berita: Berita[];
   addBerita: (b: Omit<Berita, "id" | "tanggal">) => void;
   editBerita: (id: string, updated: Omit<Berita, "id" | "tanggal">) => void;
   deleteBerita: (id: string) => void;
   alat: Alat[];
   addAlat: (a: Omit<Alat, "id">) => void;
+  editAlat: (id: string, updated: Omit<Alat, "id">) => void;
+  deleteAlat: (id: string) => void;
   pinjamAlat: (p: Omit<Peminjaman, "id" | "waktuPinjam" | "status">) => void;
   kembalikanAlat: (peminjamanId: string) => void;
   peminjaman: Peminjaman[];
@@ -100,6 +114,7 @@ const initialPeminjaman: Peminjaman[] = [
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [berita, setBerita] = useState<Berita[]>(initialBerita);
   const [alat, setAlat] = useState<Alat[]>(initialAlat);
   const [peminjaman, setPeminjaman] = useState<Peminjaman[]>(initialPeminjaman);
@@ -113,6 +128,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const storedAlat = localStorage.getItem("mhpk_alat");
       const storedPeminjaman = localStorage.getItem("mhpk_peminjaman");
       const storedCategories = localStorage.getItem("mhpk_categories");
+      const storedIsLoggedIn = localStorage.getItem("mhpk_is_logged_in");
+      const storedUser = localStorage.getItem("mhpk_user");
 
       if (storedBerita) {
         try {
@@ -142,11 +159,41 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           console.error("Error parsing stored categories:", e);
         }
       }
+      if (storedIsLoggedIn === "true") {
+        setIsLoggedIn(true);
+      }
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error("Error parsing stored user:", e);
+        }
+      }
       setIsLoaded(true);
     }
   }, []);
 
   // Save to local storage when state changes
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("mhpk_is_logged_in", isLoggedIn ? "true" : "false");
+      if (!isLoggedIn) {
+        localStorage.removeItem("mhpk_user");
+        setUser(null);
+      }
+    }
+  }, [isLoggedIn, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      if (user) {
+        localStorage.setItem("mhpk_user", JSON.stringify(user));
+      } else {
+        localStorage.removeItem("mhpk_user");
+      }
+    }
+  }, [user, isLoaded]);
+
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem("mhpk_berita", JSON.stringify(berita));
@@ -204,6 +251,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setAlat([...alat, newAlat]);
   };
 
+  const editAlat = (id: string, updated: Omit<Alat, "id">) => {
+    setAlat(
+      alat.map((item) =>
+        item.id === id ? { ...item, ...updated } : item
+      )
+    );
+  };
+
+  const deleteAlat = (id: string) => {
+    setAlat(alat.filter((item) => item.id !== id));
+  };
+
   const pinjamAlat = (p: Omit<Peminjaman, "id" | "waktuPinjam" | "status">) => {
     const newPeminjaman: Peminjaman = {
       ...p,
@@ -250,12 +309,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       value={{
         isLoggedIn,
         setIsLoggedIn,
+        user,
+        setUser,
         berita,
         addBerita,
         editBerita,
         deleteBerita,
         alat,
         addAlat,
+        editAlat,
+        deleteAlat,
         pinjamAlat,
         kembalikanAlat,
         peminjaman,

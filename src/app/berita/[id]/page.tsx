@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import PublicLayout from "@/components/layout/PublicLayout";
 import { useAppContext } from "@/store/AppContext";
-import { Calendar, User, BookOpen, ArrowLeft, Share2, Check, Clock } from "lucide-react";
+import { Calendar, User, BookOpen, ArrowLeft, Share2, Check, Clock, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -214,6 +214,25 @@ export default function BeritaDetailPage({ params }: PageProps) {
                     )}
                   </button>
                 </div>
+
+                {/* External Tautan Referensi Link */}
+                {item.link && (
+                  <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/50 rounded-2xl flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <span className="block text-[10px] font-bold text-orange-500 uppercase tracking-wider">Tautan Pendukung</span>
+                      <p className="text-sm text-neutral-600 dark:text-neutral-300 truncate font-mono mt-0.5">{item.link}</p>
+                    </div>
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-lg shadow-md shadow-orange-500/10 transition-colors shrink-0"
+                    >
+                      Kunjungi Link
+                      <LinkIcon className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                )}
 
                 {/* Article Body */}
                 <div className="prose dark:prose-invert max-w-none">
