@@ -63,7 +63,7 @@ export default function Home() {
         <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="max-w-3xl">
             <span className="inline-block py-1 px-3 rounded-full bg-orange-500/20 text-orange-400 text-sm font-semibold tracking-wider mb-4 border border-orange-500/30">
-              MAHASISWA PENCINTA ALAM BANDUNG
+              MAHASISWA PENCINTA KELESTARIAN ALAM BANDUNG
             </span>
             <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-6 leading-tight">
               Biarkan kami berkiprah dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">cara kami sendiri</span>.

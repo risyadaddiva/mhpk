@@ -14,7 +14,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-sm text-neutral-400 mb-6">
-              Mahasiswa Pecinta Alam Bandung. "Biarkan kami berkiprah dengan cara kami sendiri".
+              Mahasiswa Pencinta Alam Kelestarian Bandung. "Biarkan kami berkiprah dengan cara kami sendiri".
             </p>
             <div className="flex space-x-4">
               <a 
